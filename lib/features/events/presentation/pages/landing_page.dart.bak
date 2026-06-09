@@ -1,0 +1,1211 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/user_roles.dart';
+import '../../../../shared/animations/particle_background.dart';
+
+class LandingPage extends StatefulWidget {
+  const LandingPage({Key? key}) : super(key: key);
+
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  final ScrollController _scrollController = ScrollController();
+  
+  bool _showMission = false;
+  bool _showOrganizers = false;
+  bool _showHowItWorks = false;
+  bool _showCTA = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+    );
+
+    _fadeController.forward();
+    
+    // Setup scroll listener for section animations
+    _scrollController.addListener(_onScroll);
+    
+    // Auto-scroll hint after initial load
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.animateTo(
+          100,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  void _onScroll() {
+    final scrollPosition = _scrollController.position.pixels;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    
+    if (scrollPosition > 400 && !_showMission) {
+      setState(() => _showMission = true);
+    }
+    if (scrollPosition > 800 && !_showOrganizers) {
+      setState(() => _showOrganizers = true);
+    }
+    if (scrollPosition > 1400 && !_showHowItWorks) {
+      setState(() => _showHowItWorks = true);
+    }
+    if (scrollPosition > maxScroll * 0.7 && !_showCTA) {
+      setState(() => _showCTA = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Gradient Background
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primaryDark,
+                  AppColors.primaryPurple,
+                  Color(0xFF9C27B0),
+                ],
+              ),
+            ),
+          ),
+
+          // Particle Background
+          const Positioned.fill(
+            child: ParticleBackground(
+              particleCount: 80,
+              interactive: true,
+            ),
+          ),
+
+          // Main Content
+          SafeArea(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Container(
+                constraints: BoxConstraints(minHeight: size.height - 48),
+                child: Column(
+                  children: [
+                    // Header
+                    _buildHeader(),
+
+                    // Hero Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: _buildHeroSection(),
+                    ),
+
+                    // Scroll Indicator
+                    _buildScrollIndicator(),
+
+                    const SizedBox(height: 60),
+
+                    // Features Section
+                    _buildFeaturesSection(),
+
+                    const SizedBox(height: 80),
+
+                    // Mission Section
+                    _buildAnimatedSection(
+                      _buildMissionSection(),
+                      _showMission,
+                    ),
+
+                    const SizedBox(height: 80),
+
+                    // About Organizers Section
+                    _buildAnimatedSection(
+                      _buildOrganizersSection(),
+                      _showOrganizers,
+                    ),
+
+                    const SizedBox(height: 80),
+
+                    // How it Works Section
+                    _buildAnimatedSection(
+                      _buildHowItWorksSection(),
+                      _showHowItWorks,
+                    ),
+
+                    const SizedBox(height: 80),
+
+                    // CTA Section
+                    _buildAnimatedSection(
+                      _buildCTASection(),
+                      _showCTA,
+                    ),
+
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Logo
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.white, Colors.white70],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.event,
+                  color: AppColors.primaryPurple,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'YesyStyle Events',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          // Navigation
+          Row(
+            children: [
+              // Role Selector
+              PopupMenuButton<UserRole>(
+                icon: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        UserRoleManager.isClient 
+                            ? Icons.person 
+                            : UserRoleManager.isOrganizer 
+                                ? Icons.business_center 
+                                : Icons.admin_panel_settings,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        UserRoleManager.getCurrentRoleName(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_drop_down, 
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                onSelected: (role) {
+                  setState(() {
+                    UserRoleManager.setRole(role);
+                  });
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: UserRole.client,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.person,
+                          color: UserRoleManager.isClient 
+                              ? AppColors.primaryPurple 
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Cliente',
+                          style: TextStyle(
+                            fontWeight: UserRoleManager.isClient 
+                                ? FontWeight.bold 
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: UserRole.organizer,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.business_center,
+                          color: UserRoleManager.isOrganizer 
+                              ? AppColors.primaryPurple 
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Organizador',
+                          style: TextStyle(
+                            fontWeight: UserRoleManager.isOrganizer 
+                                ? FontWeight.bold 
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: UserRole.admin,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.admin_panel_settings,
+                          color: UserRoleManager.isAdmin 
+                              ? AppColors.primaryPurple 
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Administrador',
+                          style: TextStyle(
+                            fontWeight: UserRoleManager.isAdmin 
+                                ? FontWeight.bold 
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              TextButton(
+                onPressed: () => context.go('/dashboard'),
+                child: const Text(
+                  'Eventos',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => context.go('/dashboard'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primaryPurple,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Comenzar'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: Container(
+          padding: const EdgeInsets.all(40),
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Main Heading
+              const Text(
+                'Organiza Eventos\nExtraordinarios',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 64,
+                  fontWeight: FontWeight.bold,
+                  height: 1.2,
+                  letterSpacing: -1,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Subtitle
+              Text(
+                'La plataforma definitiva para crear, gestionar y disfrutar\neventos memorables con tu comunidad.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 20,
+                  height: 1.6,
+                ),
+              ),
+
+              const SizedBox(height: 48),
+
+              // CTA Buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => context.go('/dashboard'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.primaryPurple,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 20,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Text('Explorar Eventos'),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  OutlinedButton(
+                    onPressed: () {},
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white, width: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 20,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    child: const Text('Ver Demo'),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 60),
+
+              // Stats
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildStat('500+', 'Eventos'),
+                  const SizedBox(width: 60),
+                  _buildStat('10K+', 'Asistentes'),
+                  const SizedBox(width: 60),
+                  _buildStat('50+', 'Organizadores'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScrollIndicator() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(seconds: 2),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Column(
+            children: [
+              Text(
+                'Desliza para descubrir más',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 10.0),
+                duration: const Duration(seconds: 1),
+                curve: Curves.easeInOut,
+                builder: (context, offset, child) {
+                  return Transform.translate(
+                    offset: Offset(0, offset),
+           TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 1200),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.scale(
+            scale: 0.8 + (0.2 * value),
+            child: Container(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                children: [
+                  const Text(
+                    '¿Por qué YesyStyle Events?',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 80,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.white,
+                          Colors.transparent,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                  Wrap(
+                    spacing: 24,
+                    runSpacing: 24,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _buildFeatureCardAnimated(
+                        Icons.calendar_month,
+                        'Gestión Intuitiva',
+                        'Crea y administra eventos con una interfaz moderna y fácil de usar.',
+                        0,
+                      ),
+                      _buildFeatureCardAnimated(
+                        Icons.people,
+                        'RSVP Integrado',
+                        'Sistema completo de confirmación de asistencia y gestión de invitados.',
+                        200,
+                      ),
+                      _buildFeatureCardAnimated(
+                        Icons.analytics,
+                        'Analytics en Tiempo Real',
+                        'Monitorea el desempeño de tus eventos con estadísticas detalladas.',
+                        400,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureCardAnimated(
+    IconData icon,
+    String title,
+    String description,
+    int delay,
+  ) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 800 + delay),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 50 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: _buildFeatureCard(icon, title, description),
+          ),
+        );
+      }   style: const TextStyle(
+            color: Colors.white,
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeaturesSection() {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        children: [
+          const Text(
+            '¿Por qué YesyStyle Events?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 48),
+          Wrap(
+            spacing: 24,
+            runSpacing: 24,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildFeatureCard(
+                Icons.calendar_month,
+                'Gestión Intuitiva',
+                'Crea y administra eventos con una interfaz moderna y fácil de usar.',
+              ),
+              _buildFeatureCard(
+                Icons.people,
+                'RSVP Integrado',
+                'Sistema completo de confirmación de asistencia y gestión de invitados.',
+              ),
+              _buildFeatureCard(
+                Icons.analytics,
+                'Analytics en Tiempo Real',
+                'Monitorea el desempeño de tus eventos con estadísticas detalladas.',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard(IconData icon, String title, String description) {
+    redecoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.white.withOpacity(0.03),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 600),
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Icon(
+                        Icons.favorite,
+                        color: Colors.white.withOpacity(value),
+                        size: 64,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Nuestra Misión',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: 80,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.white,
+                        Colors.transparent,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(2)ar(16),
+            ),
+            child: Icon(
+              icon,
+              size: 32,
+              color: AppColors.primaryPurple,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 14,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMissionSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+      child: Column(
+        children: [
+          Container(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.favorite,
+                  color: Colors.white,
+                  size: 64,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Nuestra Misión',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Conectar personas a través de experiencias memorables. Creemos que cada evento es una oportunidad para crear conexiones significativas y momentos inolvidables.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 20,
+                    height: 1.8,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildMissionValue(Icons.star, 'Excelencia', 'En cada detalle'),
+                    const SizedBox(width: 40),
+                    _buildMissionValue(Icons.groups, 'Comunidad', 'Primero'),
+                    const SizedBox(width: 40),
+                    _buildMissionValue(Icons.lightbulb, 'Innovación', 'Constante'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMissionValue(IconData icon, String title, String subtitle) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Colors.white, size: 32),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          title,
+          Container(
+            width: 80,
+            height: 4,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  Colors.white,
+                  Colors.transparent,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Expertos apasionados en crear experiencias únicas',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 48),
+          Wrap(
+            spacing: 32,
+            runSpacing: 32,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildOrganizerCardAnimated(
+                'María González',
+                'Especialista en Eventos Corporativos',
+                '150+ eventos organizados',
+                Icons.business_center,
+                0,
+              ),
+              _buildOrganizerCardAnimated(
+                'Carlos Ramírez',
+                'Experto en Eventos Sociales',
+                '200+ celebraciones',
+                Icons.celebration,
+                200,
+              ),
+              _buildOrganizerCardAnimated(
+                'Ana Martínez',
+                'Coordinadora de Conferencias',
+                '80+ conferencias tech',
+                Icons.computer,
+                400,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrganizerCardAnimated(
+    String name,
+    String role,
+    String achievement,
+    IconData icon,
+    int delay,
+  ) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 800 + delay),
+      curve: Curves.easeOutBack,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: Opacity(
+            opacity: value,
+            child: _buildOrganizerCard(name, role, achievement, icon),
+          ),
+        );
+      }   Text(
+            'Expertos apasionados en crear experiencias únicas',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 48),
+          Wrap(
+            spacing: 32,
+            runSpacing: 32,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildOrganizerCard(
+                'María González',
+                'Especialista en Eventos Corporativos',
+                '150+ eventos organizados',
+                Icons.business_center,
+              ),
+              _buildOrganizerCard(
+                'Carlos Ramírez',
+                'Experto en Eventos Sociales',
+                '200+ celebraciones',
+                Icons.celebration,
+              ),
+              _buildOrganizerCard(
+                'Ana Martínez',
+                'Coordinadora de Conferencias',
+                '80+ conferencias tech',
+                Icons.computer,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrganizerCard(String name, String role, String achievement, IconData icon) {
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.3),
+                  Colors.white.withOpacity(0.1),
+                ],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 40),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            role,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              achievement,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHowItWorksSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+      child: Column(
+        children: [
+          const Text(
+            'Cómo Funciona',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Tres simples pasos para tu evento perfecto',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 48),
+          _buildHowItWorksSteps(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHowItWorksSteps() {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 1000),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: _buildStepCard(
+              '1',
+              'Explora',
+              'Descubre eventos increíbles en tu área',
+              Icons.search,
+            ),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: _buildStepCard(
+              '2',
+              'Confirma',
+              'Reserva tu lugar con un clic',
+              Icons.check_circle,
+            ),
+          )TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 1000),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.9 + (0.1 * value),
+          child: Opacity(
+            opacity: value,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.1),
+                    Colors.white.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    '¿Listo para comenzar?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 42,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 80,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.white,
+                          Colors.transparent,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Únete a miles de personas que ya están disfrutando de eventos increíbles',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.8, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.elasticOut,
+                    builder: (context, scale, child) {
+                      return Transform.scale(
+                        scale: scale,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: ElevatedButton(
+                            onPressed: () => context.go('/dashboard'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppColors.primaryPurple,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 48,
+                                vertical: 24,
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              elevation: 8,
+                              shadowColor: Colors.white.withOpacity(0.5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Text('Ver Eventos Ahora'),
+                                SizedBox(width: 8),
+                                Icon(Icons.arrow_forward, size: 20),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }     title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCTASection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            '¿Listo para comenzar?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 42,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Únete a miles de personas que ya están disfrutando de eventos increíbles',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 40),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () => context.go('/dashboard'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primaryPurple,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 48,
+                    vertical: 24,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                child: const Text('Ver Eventos Ahora'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
